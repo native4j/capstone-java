@@ -1,0 +1,3 @@
+rootProject.name = "capstone-java"
+include "lib"
+include "native4j-capstone"

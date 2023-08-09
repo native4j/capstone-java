@@ -1,0 +1,92 @@
+plugins {
+    id "java-library"
+    id "maven-publish"
+    id "com.diffplug.spotless" version "6.20.0"
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    shaded
+    shaded.transitive = false
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+
+    withSourcesJar()
+    withJavadocJar()
+}
+
+compileJava {
+    // Build the bindings
+    dependsOn ":lib:jar"
+}
+
+dependencies {
+    implementation project(":lib")
+    implementation 'org.jetbrains:annotations:24.0.0'
+
+    testImplementation platform('org.junit:junit-bom:5.9.1')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+
+    shaded fileTree(dir: "${rootDir}/lib/build/distributions", include: '*.jar')
+    implementation fileTree(dir: "${rootDir}/lib/build/distributions", include: '*.jar')
+}
+
+spotless {
+    java {
+        def rootDir = rootProject.projectDir.toPath()
+
+        importOrder("java|javax", "", "\\#", "org.native4j")
+        removeUnusedImports()
+        licenseHeaderFile(rootDir.resolve("LICENSEHEADER").toString())
+
+        eclipse().configFile(rootDir.resolve("formatter-config.xml").toString())
+
+        formatAnnotations()
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
+
+jar {
+    from {
+        configurations.shaded.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+tasks.withType(PublishToMavenRepository) {
+    def predicate = provider {
+        (repository == publishing.repositories.GitHubPackages
+                && project.ext.is_full_build)
+    }
+
+    onlyIf("only full builds must be published to non-local repositories") {
+        predicate.get()
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java;
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = "https://maven.pkg.github.com/native4j/capstone-java"
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}

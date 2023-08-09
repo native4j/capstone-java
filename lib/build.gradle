@@ -1,0 +1,163 @@
+plugins {
+    id "base"
+    id "com.diffplug.spotless" version "6.20.0"
+}
+
+project.ext {
+    target_windows_x64 = "x86_64-pc-windows-gnu"
+    target_windows_x32 = "i686-pc-windows-gnu"
+
+    target_linux_x64 = "x86_64-unknown-linux-gnu"
+    target_linux_x32 = "i686-unknown-linux-gnu"
+
+    target_linux_arm64 = "aarch64-unknown-linux-gnu"
+    target_linux_arm32 = "arm-unknown-linux-gnueabihf"
+
+    target_apple_x64 = "x86_64-apple-darwin"
+    target_apple_arm64 = "aarch64-apple-darwin"
+
+    targets = [
+            target_windows_x64,
+            target_windows_x32,
+            target_linux_x64,
+            target_linux_x32,
+            target_linux_arm64,
+            target_linux_arm32,
+            target_apple_x64,
+            target_apple_arm64
+    ]
+
+    targetMap = [
+            "windows-amd64": target_windows_x64,
+            "windows-x86": target_windows_x32,
+
+            "linux-amd64": target_linux_x64,
+            "linux-x86": target_linux_x32,
+
+            "linux-aarch64": target_linux_arm64,
+            "linux-arm": target_linux_arm32,
+
+            "mac-amd64": target_apple_x64,
+            "mac-aarch64": target_apple_arm64,
+    ]
+}
+
+tasks.register("cargoClean", Exec) {
+    commandLine "cargo", "clean"
+}
+
+clean {
+    dependsOn cargoClean
+}
+
+tasks.register("cargoBuild") {
+    def fullBuild = System.getenv("CSJ_FULL_BUILD") == "1"
+    def commands = []
+
+    def targets = [getHostRustTarget()]
+    if (fullBuild)
+        targets = project.ext.targets
+
+    targets.each { target ->
+        def profile = target.contains("apple") ? "mac-release" : "release"
+        def command = ["cargo", "build", "--profile", profile, "--target", target]
+        commands.add(command)
+    }
+
+    doLast {
+        commands.each { command ->
+            String target = command.last()
+            println "Building bindings for ${target}"
+
+            exec {
+                // We need to override CC and CXX when compiling for Mac
+                if (target.startsWith("x86_64-apple")) {
+                    environment.put("CC", "o64-clang")
+                    environment.put("CXX", "o64-clang")
+                }
+                if (target.startsWith("aarch64-apple")) {
+                    environment.put("CC", "oa64-clang")
+                    environment.put("CXX", "oa64-clang")
+                }
+                commandLine command
+            }
+        }
+    }
+}
+
+tasks.register("jar", org.gradle.jvm.tasks.Jar) {
+    dependsOn build
+
+    archiveBaseName = "natives"
+    for (final String target in project.ext.targets) {
+        def outputDir = project.ext.targetMap.entrySet().stream()
+            .filter((e) -> e.getValue().equals(target))
+            .map((e) -> e.getKey())
+            .findFirst()
+            .orElse(null);
+
+        if (outputDir == null)
+            continue;
+
+        def profile = System.getenv("CSJ_DEBUG") == 1 ? "debug" : "release"
+
+        from("target/${target}/${profile}/") {
+            include("capstone_java.dll")
+            into(outputDir)
+
+            include("libcapstone_java.so")
+            into(outputDir)
+        }
+
+        from("target/${target}/mac-release/") {
+            include("libcapstone_java.dylib")
+            into(outputDir)
+        }
+    }
+}
+
+build {
+    dependsOn cargoBuild
+    finalizedBy jar
+}
+
+check {
+    exec {
+        commandLine "cargo", "clippy"
+    }
+}
+
+spotless {
+    format "rust", {
+        target "src/**/*.rs"
+
+        apply {
+            exec {
+                commandLine "cargo", "fmt"
+            }
+        }
+
+        def rootDir = rootProject.projectDir.toPath()
+        licenseHeaderFile(rootDir.resolve("LICENSEHEADER").toString(), "(#!?\\[|use|(pub )?mod)")
+    }
+}
+
+private String getHostRustTarget() {
+    def os = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
+    def split = os.split(" ")
+    if (split.length > 0)
+        os = split[0]
+
+    def arch = System.getProperty("os.arch")
+
+    def platform = "${os}-${arch}".toString()
+
+    if (project.ext.targetMap.containsKey(platform)) {
+        def target = project.ext.targetMap[platform]
+        println "Found native Rust target: ${target}"
+        return target
+    }
+
+    println "Could not find Rust target for platform '${platform}'"
+    return null
+}

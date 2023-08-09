@@ -1,0 +1,45 @@
+name: publish
+on:
+  release:
+    types: [ "created" ]
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Cache osxcross toolchain
+        uses: actions/cache@v3
+        with:
+          path: |
+            ./osxcross/target/
+          key: ${{ runner.os }}-osxcross-${{ hashFiles('ci-setup.sh') }}
+      - name: Make CI script executable
+        run: chmod +x ./ci-setup.sh
+      - name: Execute CI script
+        run: ./ci-setup.sh
+      - name: Add osxcross to PATH
+        run: echo "$(pwd)/osxcross/target/bin" >> $GITHUB_PATH
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@v1
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Publish package
+        uses: gradle/gradle-build-action@v1
+        with:
+          arguments: publish
+        env:
+          CSJ_FULL_BUILD: 1
+          CSJ_VERSION: ${{ github.ref_name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

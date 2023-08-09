@@ -1,0 +1,3 @@
+# Ensure java and rust files use LF
+*.java         eol=lf
+*.rs           eol=lf

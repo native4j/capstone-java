@@ -36,7 +36,7 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
       - name: Publish package
-        uses: gradle/gradle-build-action@v1
+        uses: gradle/gradle-build-action@v2
         with:
           arguments: publish
         env:

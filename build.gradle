@@ -1,16 +1,6 @@
-def project_version = "dev"
-
-def version_override = System.getenv("CSJ_VERSION")
-if (version_override != null) {
-    // Remove leading "v" if present
-    if (version_override.startsWith("v"))
-        version_override = version_override.substring(1)
-    project_version = version_override.trim()
-}
-
 allprojects {
     group = "org.native4j"
-    version = project_version
+    version = "0.0.2-SNAPSHOT"
 }
 
 subprojects {

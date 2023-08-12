@@ -33,11 +33,14 @@ public final class CapstoneResult {
 
     /**
      * Returns a copy of the instructions array.
-     * 
+     *
      * @param tClass
-     *               The instruction class to cast to
-     * 
+     *               The class of T
+     *
      * @return A copy of the instructions array
+     * 
+     * @param <T>
+     *            The instruction class to cast to
      */
     public <T extends CsInsn> T[] toArray(Class<? extends T[]> tClass) {
         return Arrays.copyOf(instructions, instructionCount, tClass);
@@ -45,6 +48,11 @@ public final class CapstoneResult {
 
     /**
      * Returns an unmodifiable view of the disassembled instructions.
+     *
+     * @return An unmodifiable view of the disassembled instructions
+     *
+     * @param <T>
+     *            The instruction class to cast to
      */
     @Unmodifiable
     @SuppressWarnings("unchecked")

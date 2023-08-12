@@ -17,8 +17,7 @@ import org.native4j.capstone.insn.CapstoneResult;
 @SuppressWarnings("unused")
 public class Capstone implements AutoCloseable {
     /**
-     * Native handle to the Capstone instance. This field must only be modified by
-     * JNI.
+     * Native handle to the Capstone instance. Do not modify.
      */
     @SuppressWarnings("ALL")
     private long _CsHandle = 0;
@@ -46,6 +45,8 @@ public class Capstone implements AutoCloseable {
 
     /**
      * Get the mode this instance was created with.
+     * 
+     * @return The mode
      */
     public CapstoneMode getMode() {
         return mode;

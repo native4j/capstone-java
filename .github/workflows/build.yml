@@ -25,7 +25,7 @@ jobs:
       matrix:
         os: [ ubuntu-latest ]
         java-version: [ 11 ]
-    runs-on: [self-hosted]
+    runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
       - name: Checkout
@@ -77,7 +77,7 @@ jobs:
     name: Publish tests results
     if: inputs.is-a-release == false
     needs: test
-    runs-on: [self-hosted]
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       issues: read
@@ -99,7 +99,7 @@ jobs:
     name: Publish release results
     if: inputs.is-a-release == true
     needs: build-and-release
-    runs-on: [self-hosted]
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       issues: read
@@ -123,7 +123,7 @@ jobs:
     if: inputs.is-a-release && github.repository == 'native4j/capstone-java' && github.ref == 'refs/heads/master'
     strategy:
       fail-fast: true
-    runs-on: [self-hosted]
+    runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
       - name: Checkout
@@ -204,8 +204,8 @@ jobs:
           JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.JRELEASER_GPG_PUBLIC_KEY }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.JRELEASER_GPG_SECRET_KEY }}
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.JRELEASER_GPG_PASSPHRASE }}
-          JRELEASER_NEXUS2_MAVEN_USERNAME: ${{ secrets.JRELEASER_DEPLOY_MAVEN_NEXUS2_USERNAME }}
-          JRELEASER_NEXUS2_MAVEN_PASSWORD: ${{ secrets.JRELEASER_DEPLOY_MAVEN_NEXUS2_PASSWORD }}
+          JRELEASER_NEXUS2_USERNAME: ${{ secrets.JRELEASER_DEPLOY_MAVEN_NEXUS2_USERNAME }}
+          JRELEASER_NEXUS2_PASSWORD: ${{ secrets.JRELEASER_DEPLOY_MAVEN_NEXUS2_PASSWORD }}
       # Upload JRelease debug log
       - name: JReleaser output
         uses: actions/upload-artifact@v3

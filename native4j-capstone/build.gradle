@@ -4,6 +4,8 @@ plugins {
     id "com.diffplug.spotless" version "6.20.0"
 }
 
+project.archivesBaseName = "capstone-java"
+
 repositories {
     mavenCentral()
 }
@@ -14,6 +16,9 @@ configurations {
 }
 
 java {
+    sourceCompatibility = 11
+    targetCompatibility = 11
+
     toolchain {
         languageVersion = JavaLanguageVersion.of(11)
     }
@@ -62,31 +67,56 @@ jar {
     }
 }
 
-tasks.withType(PublishToMavenRepository) {
-    def predicate = provider {
-        (repository == publishing.repositories.GitHubPackages
-                && project.ext.is_full_build)
-    }
-
-    onlyIf("only full builds must be published to non-local repositories") {
-        predicate.get()
-    }
-}
-
 publishing {
     publications {
-        mavenJava(MavenPublication) {
+        maven(MavenPublication) {
+            groupId = project.group
+            version = project.version
+            artifactId = "capstone-java"
             from components.java;
-        }
-    }
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = "https://maven.pkg.github.com/native4j/capstone-java"
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
+
+            pom {
+                name = "capstone-java"
+                description = "Capstone bindings for Java"
+                url = "https://github.com/native4j/capstone-java"
+                licenses {
+                    license {
+                        name = "MIT"
+                        url = "https://spdx.org/licenses/MIT.html"
+                    }
+                }
+                developers {
+                    developer {
+                        id = "jus7n"
+                        name = "Justin Phelps"
+                        email = "jus7n@proton.me"
+                    }
+                }
+                scm {
+                    connection = "scm:git:git://github.com/native4j/capstone-java.git"
+                    developerConnection = 'scm:git:git://github.com/native4j/capstone-java.git'
+                    url = 'https://github.com/native4j/capstone-java'
+                }
+            }
+
+            pom.withXml {
+                // getAt(String) wraps the results in 'NodeList'
+                // So we extract the single item with 'get(0)'
+                def node = asNode().getAt('dependencies').get(0)
+                node.children().removeIf(c -> isRuntimeDependency(c))
             }
         }
     }
+
+    repositories {
+        maven {
+            name = 'staging_deploy'
+            url = layout.buildDirectory.dir('staging-deploy')
+        }
+    }
+}
+
+private static boolean isRuntimeDependency(Node node) {
+    String scope = node.get("scope").text()
+    return "runtime".equals(scope)
 }

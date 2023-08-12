@@ -7,6 +7,7 @@ sudo apt install -y build-essential \
                     git \
                     wget \
                     cmake \
+                    clang \
                     mingw-w64 \
                     gcc-arm-linux-gnueabihf \
                     gcc-aarch64-linux-gnu \
@@ -31,7 +32,7 @@ setup_osxcross() {
   cd osxcross
 
   # Install osxcross dependencies
-  ./tools/get_dependencies.sh
+  sudo ./tools/get_dependencies.sh
 
   # Download Big Sur 11.1 SDK
   wget -nc https://github.com/joseluisq/macosx-sdks/releases/download/11.1/MacOSX11.1.sdk.tar.xz
@@ -39,6 +40,12 @@ setup_osxcross() {
 
   # Build clang
   UNATTENDED=yes OSX_VERSION_MIN=11.1 ./build.sh
+
+  # Check if target exists
+  if [ ! -d "target" ]; then
+    echo "target directory does not exist"
+    exit 1
+  fi
 
   cd ../
 }

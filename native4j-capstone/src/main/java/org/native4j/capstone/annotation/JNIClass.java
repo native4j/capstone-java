@@ -12,7 +12,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marker annotation for classes that are managed by JNI.
+ * Marker annotation for classes that are managed/modified by JNI.
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.SOURCE)

@@ -32,10 +32,10 @@ impl CapstoneContext {
     }
 
     /// Clones an Arc out of the handle field of the given object.
-    pub fn get(env: &mut JNIEnv, object: &JObject) -> Arc<CapstoneContext> {
+    pub fn get(env: &mut JNIEnv, object: &JObject) -> JResult<Arc<CapstoneContext>> {
         let guard: MutexGuard<Arc<CapstoneContext>> =
-            unsafe { env.get_rust_field(object, HANDLE_FIELD).unwrap() };
-        guard.clone()
+            unsafe { env.get_rust_field(object, HANDLE_FIELD)? };
+        Ok(guard.clone())
     }
 
     /// Surrenders ownership of the context instance to Java.

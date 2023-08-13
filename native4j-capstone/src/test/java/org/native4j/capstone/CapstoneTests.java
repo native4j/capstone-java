@@ -8,11 +8,13 @@ package org.native4j.capstone;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import org.native4j.capstone.exception.CapstoneException;
 import org.native4j.capstone.insn.CapstoneResult;
 import org.native4j.capstone.insn.arm.CsInsnArm64;
 
@@ -22,21 +24,37 @@ public class CapstoneTests {
             (byte) 0xFF, (byte) 0x97, 0x00, 0x00, (byte) 0x80, 0x52, (byte) 0xFD, 0x7B, (byte) 0xC1, (byte) 0xA8,
             (byte) 0xC0, 0x03, 0x5F, (byte) 0xD6, };
 
-    private void verifyInstructions(CsInsnArm64[] insns) {
-        assertEquals(insns[0].mnemonic, "stp");
-        assertEquals(insns[0].operand, "x29, x30, [sp, #-0x10]!");
-        assertEquals(insns[0].address, 0x1000);
-        assertEquals(insns[0].conditionCodes, 0);
+    private boolean verifyInstructions(Capstone capstone, CsInsnArm64[] insns) {
+        CsInsnArm64 first = insns[0];
 
-        assertTrue(insns[0].writebackRequired);
-        assertFalse(insns[0].updatesFlags);
-        assertNull(insns[0].regsRead);
-        assertNull(insns[0].regsWrite);
-        assertNull(insns[0].groups);
+        assertEquals(first.mnemonic, "stp");
+        assertEquals(capstone.getInsnName(first.instructionId), "stp");
 
-        assertEquals(insns[0].operands[0].getReg(), 2);
-        assertEquals(insns[0].operands[1].getReg(), 3);
-        assertEquals(insns[0].operands[2].getMem().displacement, -0x10);
+        assertEquals(first.operand, "x29, x30, [sp, #-0x10]!");
+        assertEquals(first.address, 0x1000);
+        assertEquals(first.conditionCodes, 0);
+
+        assertTrue(first.writebackRequired);
+        assertFalse(first.updatesFlags);
+        assertNull(first.regsRead);
+        assertNull(first.regsWrite);
+        assertNull(first.groups);
+
+        assertEquals(first.operands[0].getReg(), 2);
+        assertEquals(first.operands[1].getReg(), 3);
+        assertEquals(first.operands[2].getMem().displacement, -0x10);
+
+        CsInsnArm64 fifth = insns[4];
+        assertEquals(fifth.mnemonic, "bl");
+        assertEquals(capstone.getInsnName(fifth.instructionId), "bl");
+
+        assertEquals(fifth.operands[0].getImm(), 3804);
+
+        assertEquals(capstone.getGroupName(fifth.groups[0]), "call");
+        assertEquals(capstone.getGroupName(fifth.groups[1]), "jump");
+        assertEquals(capstone.getGroupName(fifth.groups[2]), "branch_relative");
+
+        return true;
     }
 
     @Test
@@ -45,12 +63,27 @@ public class CapstoneTests {
             CapstoneResult result = new CapstoneResult();
             capstone.disassembleAll(result, code, 0x1000);
             CsInsnArm64[] insns = result.toArray(CsInsnArm64[].class);
-            verifyInstructions(insns);
+            verifyInstructions(capstone, insns);
         }
     }
 
     @Test
-    void testThreading() {
+    void testNullHandle() {
+        {
+            Capstone capstone = new Capstone(CapstoneMode.ARM64);
+            capstone.close();
+            assertThrows(CapstoneException.class, () -> capstone.getInsnName(0));
+        }
+        {
+            Capstone capstone = new Capstone(CapstoneMode.ARM64);
+            capstone.close();
+            assertThrows(CapstoneException.class, capstone::close);
+        }
+    }
+
+    @Test
+    void testThreading() throws InterruptedException {
+        AtomicBoolean failed = new AtomicBoolean(true);
         try (Capstone capstone = new Capstone(CapstoneMode.ARM64)) {
             List<Thread> threads = new ArrayList<>();
             for (int i = 0; i < 4; i++) {
@@ -59,19 +92,17 @@ public class CapstoneTests {
                         CapstoneResult result = new CapstoneResult();
                         capstone.disassembleAll(result, code, 0x1000);
                         CsInsnArm64[] insns = result.toArray(CsInsnArm64[].class);
-                        verifyInstructions(insns);
+                        failed.set(!verifyInstructions(capstone, insns));
                     }
                 });
                 th.start();
                 threads.add(th);
             }
             for (Thread th : threads) {
-                try {
-                    th.join();
-                } catch (InterruptedException e) {
-                    fail(e);
-                }
+                th.join();
             }
         }
+        if (failed.get())
+            fail("Failed to verify instructions");
     }
 }

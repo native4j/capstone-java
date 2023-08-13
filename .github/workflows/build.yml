@@ -14,7 +14,7 @@ on:
         type: boolean
 
 permissions:
-  contents: read
+  contents: write
   issues: write
   checks: write
   pull-requests: write
@@ -81,11 +81,6 @@ jobs:
     if: inputs.is-a-release == false
     needs: test
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: read
-      checks: write
-      pull-requests: write
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v3

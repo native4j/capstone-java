@@ -14,7 +14,10 @@ on:
         type: boolean
 
 permissions:
-  contents: write
+  contents: read
+  issues: write
+  checks: write
+  pull-requests: write
 
 jobs:
   test:
@@ -77,28 +80,6 @@ jobs:
     name: Publish tests results
     if: inputs.is-a-release == false
     needs: test
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: read
-      checks: write
-      pull-requests: write
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v3
-        with:
-          path: artifacts
-      - name: Publish test results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        with:
-          check_name: Unit Test results
-          files: artifacts/unit-test-*/**/*.xml
-
-  # Publishes the test results of 'build-and-release'
-  publish-release-results:
-    name: Publish release results
-    if: inputs.is-a-release == true
-    needs: build-and-release
     runs-on: ubuntu-latest
     permissions:
       contents: read

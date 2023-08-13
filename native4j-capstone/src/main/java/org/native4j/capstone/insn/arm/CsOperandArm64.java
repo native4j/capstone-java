@@ -30,7 +30,7 @@ public class CsOperandArm64 {
     }
 
     public long getImm() {
-        assertType(ARM64_OP_MEM);
+        assertType(ARM64_OP_IMM);
         return (long) rawOperandValue;
     }
 

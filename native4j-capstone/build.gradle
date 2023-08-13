@@ -116,6 +116,10 @@ publishing {
     }
 }
 
+tasks.withType(GenerateModuleMetadata) {
+    enabled = false
+}
+
 private static boolean isRuntimeDependency(Node node) {
     String scope = node.get("scope").text()
     return "runtime".equals(scope)
